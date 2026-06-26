@@ -1,0 +1,12 @@
+<html>
+    <head>
+        <title>成绩 </title>
+    </head>
+    <body>
+        {% if score >= 60 %}
+            <h2>成绩 {{ score }} 分，及格</h2>
+        {% else %}
+            <h2>成绩 {{ score }} 分，不及格</h2>
+        {% endif %}
+    </body>
+</html>

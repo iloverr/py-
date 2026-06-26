@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小猪迷宫大冒险 🐷</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #FFE4E1 0%, #FFF0F5 50%, #FFB6C1 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #FF69B4;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.3);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 20px;
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+        }
+
+        .timer {
+            font-size: 2em;
+            color: #FF69B4;
+            font-weight: bold;
+        }
+
+        .level-info {
+            font-size: 1.5em;
+            color: #DB7093;
+            font-weight: bold;
+        }
+
+        .progress {
+            font-size: 1.2em;
+            color: #C71585;
+        }
+
+        #gameCanvas {
+            border: 5px solid #FF69B4;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(255, 105, 180, 0.4);
+            background: #FFF0F5;
+        }
+
+        .instructions {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            text-align: center;
+            max-width: 800px;
+            color: #DB7093;
+            box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+        }
+
+        .instructions h3 {
+            color: #FF69B4;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #FFE4E1 0%, #FFF0F5 100%);
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(255, 105, 180, 0.5);
+            border: 5px solid #FF69B4;
+            animation: modalPop 0.5s ease;
+        }
+
+        @keyframes modalPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal h2 {
+            font-size: 3em;
+            color: #FF69B4;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 105, 180, 0.3);
+        }
+
+        .modal p {
+            font-size: 1.5em;
+            color: #DB7093;
+            margin-bottom: 20px;
+        }
+
+        .success-modal h2 {
+            color: #32CD32;
+        }
+
+        .fail-modal h2 {
+            color: #DC143C;
+        }
+
+        .victory-modal {
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF69B4 100%);
+        }
+
+        .victory-modal h2 {
+            color: #FFFFFF;
+            font-size: 2.5em;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .pigs {
+            font-size: 4em;
+            margin: 20px 0;
+            animation: bounce 1s ease infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        #fireworksCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .loading {
+            font-size: 2em;
+            color: #FF69B4;
+            text-align: center;
+            padding: 100px;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .timer.warning {
+            animation: heartbeat 0.5s ease infinite;
+            color: #DC143C;
+        }
+
+        
+    </style>
+</head>
+<body>
+    <h1>🐷 小猪迷宫大冒险 🐷</h1>
+
+    <div class="game-info">
+        <div class="level-info" id="levelInfo">第 1 关</div>
+        <div class="timer" id="timer">60</div>
+        <div class="progress" id="progress">0 / 10</div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="instructions">
+        <h3>🎮 游戏说明 🎮</h3>
+        <p>使用键盘的 <strong>↑ ↓ ← →</strong> 箭头键控制小猪移动，找到迷宫的出口！</p>
+        <p>⏰ 每关限时 <strong>60秒</strong>，加油哦！</p>
+    </div>
+
+    <!-- 加载提示 -->
+    <div class="modal" id="loadingModal">
+        <div class="modal-content">
+            <div class="loading">🐷 正在加载迷宫... 🐷</div>
+        </div>
+    </div>
+
+    <!-- 成功弹窗 -->
+    <div class="modal success-modal" id="successModal">
+        <div class="modal-content">
+            <div class="pigs">🐷🎉🐷</div>
+            <h2>你真棒！</h2>
+            <p>即将进入下一关...</p>
+        </div>
+    </div>
+
+    <!-- 失败弹窗 -->
+    <div class="modal fail-modal" id="failModal">
+        <div class="modal-content">
+            <div class="pigs">🐷😢🐷</div>
+            <h2>你比猪还笨！</h2>
+            <p>即将重新挑战本关...</p>
+        </div>
+    </div>
+
+    <!-- 胜利弹窗 -->
+    <div class="modal victory-modal" id="victoryModal">
+        <div class="modal-content">
+            <div class="pigs">🐷🏆🐷</div>
+            <h2>你简直是最聪明的小猪！</h2>
+            <p>🎊 恭喜你通关全部10关！🎊</p>
+        </div>
+    </div>
+
+    <!-- 烟花画布 -->
+    <canvas id="fireworksCanvas"></canvas>
+
+    
+
+    <script>
+        // 游戏配置
+        const CELL_SIZE = 25;
+        const PIG_SIZE = 20;
+
+        // 游戏状态
+        let currentLevel = 1;
+        let maze = [];
+        let pigPos = { x: 1, y: 1 };
+        let exitPos = { x: 0, y: 0 };
+        let timeLeft = 60;
+        let timerInterval = null;
+        let gameActive = false;
+        let canvas, ctx;
+        let fireworksCanvas, fireworksCtx;
+        let fireworksParticles = [];
+
+        // 初始化
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            fireworksCanvas = document.getElementById('fireworksCanvas');
+            fireworksCtx = fireworksCanvas.getContext('2d');
+
+            resizeFireworksCanvas();
+            window.addEventListener('resize', resizeFireworksCanvas);
+
+            loadLevel(currentLevel);
+            setupKeyboardControls();
+            startFireworksAnimation();
+        }
+
+        function resizeFireworksCanvas() {
+            fireworksCanvas.width = window.innerWidth;
+            fireworksCanvas.height = window.innerHeight;
+        }
+
+        // 加载关卡
+        async function loadLevel(level) {
+            showModal('loadingModal');
+
+            try {
+                const response = await fetch(`/api/maze/${level}`);
+                const data = await response.json();
+
+                maze = data.maze;
+                pigPos = { x: 1, y: 1 };
+                exitPos = { x: data.width - 2, y: data.height - 2 };
+                timeLeft = data.time_limit;
+
+                document.getElementById('levelInfo').textContent = data.name;
+                document.getElementById('progress').textContent = `${level} / 10`;
+                document.getElementById('timer').textContent = timeLeft;
+                document.getElementById('timer').classList.remove('warning');
+
+                canvas.width = data.width * CELL_SIZE;
+                canvas.height = data.height * CELL_SIZE;
+
+                hideAllModals();
+                gameActive = true;
+
+                startTimer();
+
+                drawMaze();
+            } catch (error) {
+                console.error('加载迷宫失败:', error);
+                alert('加载迷宫失败，请刷新页面重试！');
+            }
+        }
+
+        // 绘制迷宫
+        function drawMaze() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < maze.length; y++) {
+                for (let x = 0; x < maze[y].length; x++) {
+                    if (maze[y][x] === 1) {
+                        // 墙壁 - 粉色渐变
+                        const gradient = ctx.createLinearGradient(
+                            x * CELL_SIZE, y * CELL_SIZE,
+                            (x + 1) * CELL_SIZE, (y + 1) * CELL_SIZE
+                        );
+                        gradient.addColorStop(0, '#FFB6C1');
+                        gradient.addColorStop(1, '#FF69B4');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+                        // 墙壁边框
+                        ctx.strokeStyle = '#DB7093';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    } else {
+                        // 通路 - 浅粉色
+                        ctx.fillStyle = '#FFF0F5';
+                        ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+
+            // 绘制出口 - 使用粉色爱心标记
+            drawExit();
+
+            // 绘制小猪
+            drawPig();
+        }
+
+        // 绘制出口
+        function drawExit() {
+            const x = exitPos.x * CELL_SIZE + CELL_SIZE / 2;
+            const y = exitPos.y * CELL_SIZE + CELL_SIZE / 2;
+
+            // 发光效果
+            ctx.beginPath();
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, CELL_SIZE);
+            gradient.addColorStop(0, 'rgba(255, 105, 180, 0.8)');
+            gradient.addColorStop(1, 'rgba(255, 182, 193, 0)');
+            ctx.fillStyle = gradient;
+            ctx.arc(x, y, CELL_SIZE, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 绘制星星
+            ctx.font = '20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⭐', x, y);
+        }
+
+        // 绘制小猪
+        function drawPig() {
+            const x = pigPos.x * CELL_SIZE + CELL_SIZE / 2;
+            const y = pigPos.y * CELL_SIZE + CELL_SIZE / 2;
+
+            // 小猪身体
+            ctx.beginPath();
+            ctx.fillStyle = '#FFB6C1';
+            ctx.arc(x, y, PIG_SIZE / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 小猪边框
+            ctx.strokeStyle = '#FF69B4';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 小猪耳朵
+            ctx.fillStyle = '#FFB6C1';
+            ctx.beginPath();
+            ctx.arc(x - 8, y - 8, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x + 8, y - 8, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // 小猪眼睛
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(x - 4, y - 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 4, y - 2, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 小猪鼻子
+            ctx.fillStyle = '#FF69B4';
+            ctx.beginPath();
+            ctx.ellipse(x, y + 3, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 小猪鼻孔
+            ctx.fillStyle = '#DB7093';
+            ctx.beginPath();
+            ctx.arc(x - 1.5, y + 3, 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x + 1.5, y + 3, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 键盘控制
+        function setupKeyboardControls() {
+            document.addEventListener('keydown', function(e) {
+                if (!gameActive) return;
+
+                let newX = pigPos.x;
+                let newY = pigPos.y;
+
+                switch(e.key) {
+                    case 'ArrowUp':
+                        newY--;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowDown':
+                        newY++;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowLeft':
+                        newX--;
+                        e.preventDefault();
+                        break;
+                    case 'ArrowRight':
+                        newX++;
+                        e.preventDefault();
+                        break;
+                    default:
+                        return;
+                }
+
+                // 检查是否撞墙
+                if (newY >= 0 && newY < maze.length &&
+                    newX >= 0 && newX < maze[0].length &&
+                    maze[newY][newX] === 0) {
+                    pigPos.x = newX;
+                    pigPos.y = newY;
+                    drawMaze();
+
+                    // 检查是否到达出口
+                    if (pigPos.x === exitPos.x && pigPos.y === exitPos.y) {
+                        handleWin();
+                    }
+                }
+            });
+        }
+
+        // 计时器
+        function startTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            timerInterval = setInterval(() => {
+                if (!gameActive) return;
+
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+
+                // 最后10秒警告
+                if (timeLeft <= 10) {
+                    document.getElementById('timer').classList.add('warning');
+                }
+
+                // 时间耗尽
+                if (timeLeft <= 0) {
+                    handleLose();
+                }
+            }, 1000);
+        }
+
+        // 处理胜利
+        function handleWin() {
+            gameActive = false;
+            clearInterval(timerInterval);
+
+            if (currentLevel >= 10) {
+                // 通关
+                showModal('victoryModal');
+                launchFireworks();
+            } else {
+                // 过关
+                showModal('successModal');
+                setTimeout(() => {
+                    currentLevel++;
+                    loadLevel(currentLevel);
+                }, 5000);
+            }
+        }
+
+        // 处理失败
+        function handleLose() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            showModal('failModal');
+
+            setTimeout(() => {
+                loadLevel(currentLevel);
+            }, 5000);
+        }
+
+        // 模态框控制
+        function showModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function hideAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        // 烟花效果
+        function launchFireworks() {
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    fireworksParticles.push(createFirework());
+                }, i * 100);
+            }
+        }
+
+        function createFirework() {
+            const colors = ['#FF69B4', '#FFB6C1', '#FF1493', '#FFD700', '#FFA500', '#FF6B6B'];
+            return {
+                x: Math.random() * fireworksCanvas.width,
+                y: Math.random() * fireworksCanvas.height * 0.5,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                particles: createParticles(30 + Math.random() * 20),
+                alpha: 1
+            };
+        }
+
+        function createParticles(count) {
+            const particles = [];
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 / count) * i;
+                const speed = 2 + Math.random() * 4;
+                particles.push({
+                    x: 0,
+                    y: 0,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    alpha: 1,
+                    size: 2 + Math.random() * 3
+                });
+            }
+            return particles;
+        }
+
+        function updateFireworks() {
+            fireworksCtx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height);
+
+            fireworksParticles = fireworksParticles.filter(firework => {
+                firework.particles.forEach(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.vy += 0.05; // 重力
+                    particle.alpha -= 0.015;
+
+                    if (particle.alpha > 0) {
+                        fireworksCtx.beginPath();
+                        fireworksCtx.fillStyle = firework.color;
+                        fireworksCtx.globalAlpha = particle.alpha;
+                        fireworksCtx.arc(
+                            firework.x + particle.x,
+                            firework.y + particle.y,
+                            particle.size,
+                            0,
+                            Math.PI * 2
+                        );
+                        fireworksCtx.fill();
+                    }
+                });
+
+                firework.alpha -= 0.008;
+                return firework.alpha > 0 || firework.particles.some(p => p.alpha > 0);
+            });
+
+            if (fireworksParticles.length > 0) {
+                requestAnimationFrame(updateFireworks);
+            }
+        }
+
+        function startFireworksAnimation() {
+            // 定期发射烟花
+            setInterval(() => {
+                if (document.getElementById('victoryModal').classList.contains('active')) {
+                    fireworksParticles.push(createFirework());
+                    updateFireworks();
+                }
+            }, 500);
+        }
+
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script>
+</body>
+</html>

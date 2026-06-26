@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <title>Item</title>
+    </head>
+    <body>
+        <table border="1">
+            <tr>
+                <th>姓名</th>
+                <th>成绩</th>
+            </tr>
+            {% for name,score in student_dict.items() %}
+                <tr>
+                    <td>{{name}}</td>
+                    <td>{{score}}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    </body>
+</html>
